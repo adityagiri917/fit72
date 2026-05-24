@@ -789,9 +789,8 @@
     }
 
     function renderStreaks() {
-      const s = streakStats();
-      document.getElementById('currentStreak').textContent = s.current;
-      document.getElementById('bestStreak').textContent = s.best;
+      document.getElementById('currentStreak').textContent = streakStats().current;
+      document.getElementById('bestStreak').textContent = streakStats().best;
     }
 
     function renderProgress() {
