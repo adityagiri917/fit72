@@ -220,7 +220,7 @@
 <body>
   <header>
     <h1>Fit72</h1>
-    <div class="sub">Local 72 kg transformation tracker. Day 1 → Day 5 cycle.</div>
+    <div class="sub">Local gym transformation tracker. Set your own current and target weight.</div>
   </header>
 
   <main>
@@ -235,7 +235,7 @@
         <h3>Your Mission</h3>
         <div class="grid">
           <div class="stat"><div class="small">Current</div><div class="value" id="currentWeightStat">83 kg</div></div>
-          <div class="stat"><div class="small">Target</div><div class="value">72 kg</div></div>
+          <div class="stat"><div class="small">Target</div><div class="value" id="targetWeightStat">72 kg</div></div>
         </div>
         <div class="progress-bar"><div id="weightProgress" class="progress-fill"></div></div>
         <p id="remainingText"></p>
@@ -357,6 +357,23 @@
 
     <section id="more" class="screen">
       <div class="card">
+        <h2>Profile / Goal Settings</h2>
+        <p class="small">Set your own starting weight, current weight, target weight, and height. After you start logging body weight, the app uses your latest saved weight as your current weight.</p>
+        <label>Name</label>
+        <input id="profileNameInput" type="text" placeholder="Example: Aditya" />
+        <div class="row">
+          <div><label>Starting Weight, kg</label><input id="startWeightInput" type="number" step="0.1" /></div>
+          <div><label>Current Weight, kg</label><input id="currentWeightInput" type="number" step="0.1" /></div>
+        </div>
+        <div class="row">
+          <div><label>Target Weight, kg</label><input id="targetWeightInput" type="number" step="0.1" /></div>
+          <div><label>Height, cm</label><input id="heightInput" type="number" step="0.1" /></div>
+        </div>
+        <button onclick="saveProfile()">Save Profile / Goal</button>
+        <p id="profileSummary" class="tip"></p>
+      </div>
+
+      <div class="card">
         <h2>Measurements</h2>
         <p class="small">Weight can fluctuate. Waist measurement is very useful for fat loss tracking.</p>
         <div class="row">
@@ -419,8 +436,9 @@
   </nav>
 
   <script>
-    const START_WEIGHT = 83;
-    const TARGET_WEIGHT = 72;
+    const DEFAULT_START_WEIGHT = 83;
+    const DEFAULT_TARGET_WEIGHT = 72;
+    const DEFAULT_HEIGHT = 169;
     let calendarDate = new Date();
     let timerInterval = null;
     let timerRemaining = 0;
@@ -463,7 +481,19 @@
     ];
 
     function emptyData() {
-      return { weights: [], workouts: [], measurements: [], habits: [] };
+      return {
+        profile: {
+          name: '',
+          startWeight: DEFAULT_START_WEIGHT,
+          currentWeight: DEFAULT_START_WEIGHT,
+          targetWeight: DEFAULT_TARGET_WEIGHT,
+          height: DEFAULT_HEIGHT
+        },
+        weights: [],
+        workouts: [],
+        measurements: [],
+        habits: []
+      };
     }
 
     function getData() {
@@ -472,10 +502,30 @@
       data.workouts = data.workouts || [];
       data.measurements = data.measurements || [];
       data.habits = data.habits || [];
+      data.profile = data.profile || {};
+      data.profile.name = data.profile.name || '';
+      data.profile.startWeight = Number(data.profile.startWeight || DEFAULT_START_WEIGHT);
+      data.profile.currentWeight = Number(data.profile.currentWeight || data.profile.startWeight || DEFAULT_START_WEIGHT);
+      data.profile.targetWeight = Number(data.profile.targetWeight || DEFAULT_TARGET_WEIGHT);
+      data.profile.height = Number(data.profile.height || DEFAULT_HEIGHT);
       return data;
     }
 
     function setData(data) { localStorage.setItem('fit72Data', JSON.stringify(data)); }
+
+    function getProfile() {
+      return getData().profile;
+    }
+
+    function startWeightValue() {
+      const profile = getProfile();
+      return Number(profile.startWeight || DEFAULT_START_WEIGHT);
+    }
+
+    function targetWeightValue() {
+      const profile = getProfile();
+      return Number(profile.targetWeight || DEFAULT_TARGET_WEIGHT);
+    }
 
     function dateKey(date = new Date()) {
       const y = date.getFullYear();
@@ -646,6 +696,7 @@
       const weight = Number(document.getElementById('bodyWeightInput').value);
       if (!weight) { alert('Please enter your weight.'); return; }
       const data = getData();
+      data.profile.currentWeight = weight;
       data.weights.unshift({ date: dateKey(), displayDate: displayDate(), weight });
       setData(data);
       document.getElementById('bodyWeightInput').value = '';
@@ -655,20 +706,56 @@
 
     function latestWeightValue() {
       const data = getData();
-      return data.weights.length ? data.weights[0].weight : START_WEIGHT;
+      const profile = data.profile;
+      return data.weights.length ? Number(data.weights[0].weight) : Number(profile.currentWeight || profile.startWeight || DEFAULT_START_WEIGHT);
     }
 
     function renderWeightProgress() {
       const latest = latestWeightValue();
-      const lost = START_WEIGHT - latest;
-      const totalToLose = START_WEIGHT - TARGET_WEIGHT;
-      const progress = Math.max(0, Math.min(100, (lost / totalToLose) * 100));
-      const remaining = Math.max(0, latest - TARGET_WEIGHT).toFixed(1);
+      const startWeight = startWeightValue();
+      const targetWeight = targetWeightValue();
+      const lost = startWeight - latest;
+      const totalToLose = startWeight - targetWeight;
+      let progress = 0;
+      if (totalToLose !== 0) progress = (lost / totalToLose) * 100;
+      progress = Math.max(0, Math.min(100, progress));
+      const remaining = Math.max(0, latest - targetWeight).toFixed(1);
       document.getElementById('currentWeightStat').textContent = `${latest} kg`;
+      document.getElementById('targetWeightStat').textContent = `${targetWeight} kg`;
       document.getElementById('weightProgress').style.width = `${progress}%`;
-      document.getElementById('remainingText').textContent = `${remaining} kg remaining to reach 72 kg.`;
+      document.getElementById('remainingText').textContent = `${remaining} kg remaining to reach ${targetWeight} kg.`;
       document.getElementById('latestWeight').textContent = latest;
       document.getElementById('remainingWeight').textContent = remaining;
+    }
+
+    function saveProfile() {
+      const data = getData();
+      const name = document.getElementById('profileNameInput').value.trim();
+      const startWeight = Number(document.getElementById('startWeightInput').value);
+      const currentWeight = Number(document.getElementById('currentWeightInput').value);
+      const targetWeight = Number(document.getElementById('targetWeightInput').value);
+      const height = Number(document.getElementById('heightInput').value);
+
+      if (!startWeight || !currentWeight || !targetWeight || !height) {
+        alert('Please enter starting weight, current weight, target weight, and height.');
+        return;
+      }
+
+      data.profile = { name, startWeight, currentWeight, targetWeight, height };
+      setData(data);
+      alert('Profile and goal saved locally.');
+      render();
+    }
+
+    function renderProfile() {
+      const profile = getProfile();
+      document.getElementById('profileNameInput').value = profile.name || '';
+      document.getElementById('startWeightInput').value = profile.startWeight;
+      document.getElementById('currentWeightInput').value = latestWeightValue();
+      document.getElementById('targetWeightInput').value = profile.targetWeight;
+      document.getElementById('heightInput').value = profile.height;
+      const remaining = Math.max(0, latestWeightValue() - profile.targetWeight).toFixed(1);
+      document.getElementById('profileSummary').textContent = `${profile.name ? profile.name + ', y' : 'Y'}our goal is ${latestWeightValue()} kg → ${profile.targetWeight} kg. Remaining: ${remaining} kg.`;
     }
 
     function renderWeightHistory() {
@@ -702,8 +789,9 @@
     }
 
     function renderStreaks() {
-      document.getElementById('currentStreak').textContent = streakStats().current;
-      document.getElementById('bestStreak').textContent = streakStats().best;
+      const s = streakStats();
+      document.getElementById('currentStreak').textContent = s.current;
+      document.getElementById('bestStreak').textContent = s.best;
     }
 
     function renderProgress() {
@@ -743,8 +831,10 @@
       ctx.strokeStyle = '#64748b'; ctx.beginPath(); ctx.moveTo(padding, padding); ctx.lineTo(padding, canvas.height - padding); ctx.lineTo(canvas.width - padding, canvas.height - padding); ctx.stroke();
       if (!weights.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '16px Arial'; ctx.fillText('No weight data yet. Add weight logs to see your graph.', 70, 130); return; }
       const values = weights.map(w => Number(w.weight));
-      const minWeight = Math.min(TARGET_WEIGHT, ...values) - 1;
-      const maxWeight = Math.max(START_WEIGHT, ...values) + 1;
+      const targetWeight = targetWeightValue();
+      const startWeight = startWeightValue();
+      const minWeight = Math.min(targetWeight, ...values) - 1;
+      const maxWeight = Math.max(startWeight, ...values) + 1;
       const range = maxWeight - minWeight || 1;
       for (let i = 0; i <= 4; i++) {
         const value = maxWeight - (range / 4) * i;
@@ -756,9 +846,9 @@
         const y = padding + ((maxWeight - weight) / range) * height;
         return { x, y };
       }
-      const targetY = padding + ((maxWeight - TARGET_WEIGHT) / range) * height;
+      const targetY = padding + ((maxWeight - targetWeight) / range) * height;
       ctx.strokeStyle = '#f59e0b'; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(padding, targetY); ctx.lineTo(canvas.width - padding, targetY); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = '#f59e0b'; ctx.fillText('Target 72kg', canvas.width - 120, targetY - 6);
+      ctx.fillStyle = '#f59e0b'; ctx.fillText(`Target ${targetWeight}kg`, canvas.width - 130, targetY - 6);
       ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3; ctx.beginPath();
       weights.forEach((w, index) => { const p = point(index, Number(w.weight)); if (index === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
       ctx.stroke();
@@ -991,6 +1081,7 @@
       renderCalendar();
       renderMeasurements();
       renderHabits();
+      renderProfile();
     }
 
     renderWorkoutForm();
