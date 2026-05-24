@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fit72 - Local Gym Tracker</title>
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Fit72" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --card2: #1f2937;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #020617, var(--bg));
+      color: var(--text);
+      padding-bottom: 92px;
+    }
+
+    header {
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.96);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1, h2, h3 { margin: 0; }
+    h1 { font-size: 26px; }
+    h2 { margin-bottom: 14px; font-size: 22px; }
+    h3 { font-size: 17px; margin-bottom: 8px; }
+    p { color: var(--muted); line-height: 1.5; }
+    a { color: var(--accent); text-decoration: none; font-weight: bold; }
+
+    .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+    main { padding: 16px; max-width: 780px; margin: 0 auto; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .card {
+      background: rgba(17, 24, 39, 0.94);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+    .stat {
+      background: var(--card2);
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .stat .value { font-size: 24px; font-weight: bold; margin-top: 6px; }
+
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      font-size: 13px;
+      margin: 6px 6px 6px 0;
+    }
+
+    .pill.good { background: rgba(34, 197, 94, 0.12); color: var(--good); }
+    .pill.warn { background: rgba(245, 158, 11, 0.12); color: var(--warn); }
+
+    label { display: block; margin: 12px 0 6px; color: var(--muted); font-size: 14px; }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #020617;
+      color: var(--text);
+      font-size: 16px;
+    }
+
+    input[type="checkbox"] { width: auto; transform: scale(1.25); margin-right: 8px; }
+    textarea { min-height: 80px; resize: vertical; }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #020617;
+      background: var(--accent);
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    button.secondary { background: #334155; color: var(--text); }
+    button.danger { background: var(--danger); color: white; }
+    button.good { background: var(--good); color: #052e16; }
+
+    .exercise, .history-item {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 10px;
+      background: #020617;
+    }
+
+    .exercise-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .history-item strong { display: block; margin-bottom: 4px; }
+    .small { font-size: 13px; color: var(--muted); }
+    .tip { border-left: 4px solid var(--accent); padding-left: 12px; color: var(--text); }
+    .warning { border-left: 4px solid var(--warn); padding-left: 12px; }
+
+    .nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(2, 6, 23, 0.98);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      z-index: 20;
+    }
+
+    .nav button {
+      border-radius: 0;
+      margin: 0;
+      padding: 11px 2px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .nav button.active { color: var(--accent); background: rgba(56, 189, 248, 0.08); }
+
+    .progress-bar {
+      width: 100%;
+      height: 14px;
+      background: #020617;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-top: 10px;
+    }
+
+    .progress-fill { height: 100%; background: var(--good); width: 0%; }
+
+    .chart-wrap {
+      width: 100%;
+      overflow-x: auto;
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px;
+      margin-top: 12px;
+    }
+
+    canvas { width: 100%; max-width: 100%; height: 240px; display: block; }
+
+    .calendar-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .calendar-cell, .calendar-head {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      min-height: 58px;
+      padding: 6px;
+      background: #020617;
+      font-size: 12px;
+      overflow: hidden;
+    }
+    .calendar-head { min-height: auto; text-align: center; color: var(--muted); background: var(--card2); font-weight: bold; }
+    .calendar-cell.done { border-color: rgba(34, 197, 94, 0.8); background: rgba(34, 197, 94, 0.08); }
+    .calendar-cell.habit { border-color: rgba(56, 189, 248, 0.45); }
+    .calendar-day-num { font-weight: bold; margin-bottom: 4px; }
+    .calendar-workout { color: var(--good); font-size: 10px; line-height: 1.25; }
+
+    .timer-display { font-size: 46px; text-align: center; font-weight: bold; margin: 14px 0; }
+
+    @media (max-width: 420px) {
+      .grid, .grid3, .row { grid-template-columns: 1fr; }
+      h1 { font-size: 23px; }
+      h2 { font-size: 20px; }
+      main { padding: 12px; }
+      .card { padding: 14px; border-radius: 16px; }
+      input, select, textarea, button { font-size: 16px; }
+      .calendar-cell { min-height: 52px; padding: 4px; }
+      .calendar-workout { font-size: 9px; }
+      .nav button { font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Fit72</h1>
+    <div class="sub">Local 72 kg transformation tracker. Day 1 → Day 5 cycle.</div>
+  </header>
+
+  <main>
+    <section id="today" class="screen active">
+      <div class="card">
+        <h2>Next Workout</h2>
+        <div id="todayWorkout"></div>
+        <button onclick="goToWorkout()">Start This Workout</button>
+      </div>
+
+      <div class="card">
+        <h3>Your Mission</h3>
+        <div class="grid">
+          <div class="stat"><div class="small">Current</div><div class="value" id="currentWeightStat">83 kg</div></div>
+          <div class="stat"><div class="small">Target</div><div class="value">72 kg</div></div>
+        </div>
+        <div class="progress-bar"><div id="weightProgress" class="progress-fill"></div></div>
+        <p id="remainingText"></p>
+      </div>
+
+      <div class="card">
+        <h3>Consistency</h3>
+        <div class="grid">
+          <div class="stat"><div class="small">Current Streak</div><div class="value" id="currentStreak">0</div></div>
+          <div class="stat"><div class="small">Best Streak</div><div class="value" id="bestStreak">0</div></div>
+        </div>
+        <p class="small">Streak counts workout dates. A gap of more than 3 days breaks the streak.</p>
+      </div>
+
+      <div class="card">
+        <h3>Coach Suggestion</h3>
+        <p class="tip" id="coachTip">Start with Day 1. If you miss a day, continue with the next workout.</p>
+      </div>
+    </section>
+
+    <section id="workout" class="screen">
+      <div class="card">
+        <h2>Rest Timer</h2>
+        <div class="timer-display" id="timerDisplay">00:00</div>
+        <div class="grid3">
+          <button class="secondary" onclick="startTimer(60)">60s</button>
+          <button class="secondary" onclick="startTimer(90)">90s</button>
+          <button class="secondary" onclick="startTimer(120)">120s</button>
+        </div>
+        <button class="danger" onclick="stopTimer()">Stop Timer</button>
+      </div>
+
+      <div class="card">
+        <h2>Log Workout</h2>
+        <p class="small">The selected workout should normally be your next Day 1–Day 5 workout.</p>
+        <label>Workout Day</label>
+        <select id="workoutSelect"></select>
+
+        <label>Cardio Type</label>
+        <select id="cardioType">
+          <option>Incline Treadmill Walk</option>
+          <option>Cycling</option>
+          <option>Elliptical</option>
+          <option>Stair Climber</option>
+          <option>Outdoor Walk</option>
+        </select>
+
+        <label>Cardio Minutes</label>
+        <input id="cardioMinutes" type="number" value="30" />
+        <div id="exerciseInputs"></div>
+
+        <label>Workout Notes</label>
+        <textarea id="workoutNotes" placeholder="Example: Felt strong, increase chest press next time..."></textarea>
+        <button onclick="saveWorkout()">Save Workout With Sets</button>
+        <button class="secondary" onclick="markWorkoutComplete()">Mark Workout Complete Without Sets</button>
+      </div>
+    </section>
+
+    <section id="weight" class="screen">
+      <div class="card">
+        <h2>Log Body Weight</h2>
+        <label>Today's Weight, kg</label>
+        <input id="bodyWeightInput" type="number" step="0.1" placeholder="Example: 82.7" />
+        <button onclick="saveWeight()">Save Weight</button>
+      </div>
+      <div class="card">
+        <h3>Weight History</h3>
+        <div id="weightHistory"></div>
+      </div>
+    </section>
+
+    <section id="progress" class="screen">
+      <div class="card">
+        <h2>Progress</h2>
+        <div class="grid">
+          <div class="stat"><div class="small">Workouts Done</div><div class="value" id="workoutsDone">0</div></div>
+          <div class="stat"><div class="small">Cardio Minutes</div><div class="value" id="cardioDone">0</div></div>
+          <div class="stat"><div class="small">Latest Weight</div><div class="value" id="latestWeight">83</div></div>
+          <div class="stat"><div class="small">Remaining</div><div class="value" id="remainingWeight">11</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Weight Trend Graph</h3>
+        <p class="small">Log weight 2–4 times per week for a smoother trend.</p>
+        <div class="chart-wrap"><canvas id="weightChart" width="680" height="260"></canvas></div>
+      </div>
+
+      <div class="card">
+        <h3>Personal Records</h3>
+        <div id="personalRecords"></div>
+      </div>
+
+      <div class="card">
+        <h3>Exercise Progress</h3>
+        <label>Select Exercise</label>
+        <select id="exerciseProgressSelect" onchange="renderExerciseProgress()"></select>
+        <div id="exerciseProgressBox"></div>
+      </div>
+
+      <div class="card">
+        <h3>Workout History</h3>
+        <div id="workoutHistory"></div>
+      </div>
+    </section>
+
+    <section id="calendar" class="screen">
+      <div class="card">
+        <h2>Calendar</h2>
+        <p class="small">Green days show completed workouts. Blue border means nutrition habits were logged.</p>
+        <div class="calendar-controls">
+          <button class="secondary" onclick="changeMonth(-1)">Previous</button>
+          <button class="secondary" onclick="changeMonth(1)">Next</button>
+        </div>
+        <h3 id="calendarTitle"></h3>
+        <div id="calendarGrid" class="calendar-grid"></div>
+      </div>
+    </section>
+
+    <section id="more" class="screen">
+      <div class="card">
+        <h2>Measurements</h2>
+        <p class="small">Weight can fluctuate. Waist measurement is very useful for fat loss tracking.</p>
+        <div class="row">
+          <div><label>Waist, cm</label><input id="waistInput" type="number" step="0.1" /></div>
+          <div><label>Chest, cm</label><input id="chestInput" type="number" step="0.1" /></div>
+        </div>
+        <div class="row">
+          <div><label>Arm, cm</label><input id="armInput" type="number" step="0.1" /></div>
+          <div><label>Thigh, cm</label><input id="thighInput" type="number" step="0.1" /></div>
+        </div>
+        <button onclick="saveMeasurements()">Save Measurements</button>
+        <div id="measurementHistory"></div>
+      </div>
+
+      <div class="card">
+        <h2>Daily Nutrition Habits</h2>
+        <p class="small">Simple checklist. No complicated calorie counting.</p>
+        <label><input id="proteinHabit" type="checkbox" /> Protein target completed</label>
+        <label><input id="waterHabit" type="checkbox" /> Enough water</label>
+        <label><input id="stepsHabit" type="checkbox" /> 8,000+ steps or active day</label>
+        <label><input id="junkHabit" type="checkbox" /> Avoided junk / sugary drinks</label>
+        <button onclick="saveHabits()">Save Today's Habits</button>
+        <div id="habitHistory"></div>
+      </div>
+
+      <div class="card">
+        <h2>Workout Plan</h2>
+        <p class="small">This plan is based on the equipment visible in your gym videos/photos: treadmill, bike, elliptical, cable station, Smith machine, machine chest press, leg machines, rows, and core/back-extension equipment. Follow Day 1 to Day 5 in order. If you miss a day, continue with the next workout.</p>
+        <div id="planList"></div>
+      </div>
+
+      <div class="card">
+        <h3>Optional Abs Finisher</h3>
+        <p>Do this 2–3 times per week after weights, especially on Day 1, Day 3, or Day 5.</p>
+        <div class="history-item">
+          <strong>Quick Abs Circuit</strong>
+          <p>1. Cable Crunch — 3 x 12–15<br>2. Hanging Knee Raise — 3 x 10–15<br>3. Plank — 3 x 30–45 sec<br>Rest: 45–60 sec between sets</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Backup / Restore</h2>
+        <p>Your data is stored locally in this browser. Export a backup regularly.</p>
+        <button class="secondary" onclick="exportData()">Export Backup</button>
+        <label>Import Backup File</label>
+        <input id="importFile" type="file" accept="application/json" />
+        <button class="secondary" onclick="importData()">Import Backup</button>
+        <button class="danger" onclick="resetData()">Reset All Data</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="nav">
+    <button class="active" onclick="showScreen('today', this)">Today</button>
+    <button onclick="showScreen('workout', this)">Workout</button>
+    <button onclick="showScreen('weight', this)">Weight</button>
+    <button onclick="showScreen('progress', this)">Progress</button>
+    <button onclick="showScreen('calendar', this)">Calendar</button>
+    <button onclick="showScreen('more', this)">More</button>
+  </nav>
+
+  <script>
+    const START_WEIGHT = 83;
+    const TARGET_WEIGHT = 72;
+    let calendarDate = new Date();
+    let timerInterval = null;
+    let timerRemaining = 0;
+
+    function yt(query) {
+      return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query + ' proper form gym exercise');
+    }
+
+    const workoutPlan = [
+      { day: 'Day 1', split: 'Chest + Triceps', cardio: '30 min treadmill incline walk', exercises: [
+        { name: 'Machine Chest Press', sets: 3, reps: '10-12', video: yt('machine chest press') },
+        { name: 'Incline Dumbbell or Smith Press', sets: 3, reps: '10-12', video: yt('incline dumbbell press smith machine incline press') },
+        { name: 'Cable Chest Fly', sets: 3, reps: '12-15', video: yt('cable chest fly') },
+        { name: 'Rope Triceps Pushdown', sets: 3, reps: '12-15', video: yt('rope triceps pushdown') }
+      ]},
+      { day: 'Day 2', split: 'Back + Biceps', cardio: '30 min cycling, treadmill, or elliptical', exercises: [
+        { name: 'Lat Pulldown on Cable Station', sets: 3, reps: '10-12', video: yt('lat pulldown cable station') },
+        { name: 'Seated Cable Row', sets: 3, reps: '10-12', video: yt('seated cable row') },
+        { name: 'Plate-Loaded T-Bar Row or Chest-Supported Row', sets: 3, reps: '10-12', video: yt('t bar row chest supported row machine') },
+        { name: 'Cable Biceps Curl', sets: 3, reps: '12-15', video: yt('cable biceps curl') }
+      ]},
+      { day: 'Day 3', split: 'Legs + Abs', cardio: '30 min easy cycling or incline walk', exercises: [
+        { name: 'Plate-Loaded Leg Press or Hack Squat', sets: 4, reps: '10-12', video: yt('plate loaded leg press hack squat') },
+        { name: 'Leg Extension', sets: 3, reps: '12-15', video: yt('leg extension machine') },
+        { name: 'Leg Curl or Dumbbell Romanian Deadlift', sets: 3, reps: '10-12', video: yt('leg curl dumbbell romanian deadlift') },
+        { name: 'Cable Crunch', sets: 3, reps: '12-15', video: yt('cable crunch') }
+      ]},
+      { day: 'Day 4', split: 'Shoulders + Arms', cardio: '30 min moderate treadmill, bike, or elliptical', exercises: [
+        { name: 'Shoulder Press Machine', sets: 3, reps: '10-12', video: yt('shoulder press machine') },
+        { name: 'Cable or Dumbbell Lateral Raise', sets: 3, reps: '12-15', video: yt('cable lateral raise dumbbell lateral raise') },
+        { name: 'Face Pull or Rear Delt Cable Fly', sets: 3, reps: '12-15', video: yt('face pull rear delt cable fly') },
+        { name: 'Cable Curl + Rope Pushdown Superset', sets: 3, reps: '12-15', video: yt('cable curl rope triceps pushdown superset') }
+      ]},
+      { day: 'Day 5', split: 'Full Body + Core', cardio: '30 min cardio machine of choice', exercises: [
+        { name: 'Smith Machine Squat or Goblet Squat', sets: 3, reps: '10-12', video: yt('smith machine squat goblet squat') },
+        { name: 'Machine Chest Press', sets: 3, reps: '10-12', video: yt('machine chest press') },
+        { name: 'Lat Pulldown or Seated Cable Row', sets: 3, reps: '10-12', video: yt('lat pulldown seated cable row') },
+        { name: 'Back Extension + Hanging Knee Raise', sets: 3, reps: '10-15 each', video: yt('back extension hanging knee raise') }
+      ]}
+    ];
+
+    function emptyData() {
+      return { weights: [], workouts: [], measurements: [], habits: [] };
+    }
+
+    function getData() {
+      const data = JSON.parse(localStorage.getItem('fit72Data')) || emptyData();
+      data.weights = data.weights || [];
+      data.workouts = data.workouts || [];
+      data.measurements = data.measurements || [];
+      data.habits = data.habits || [];
+      return data;
+    }
+
+    function setData(data) { localStorage.setItem('fit72Data', JSON.stringify(data)); }
+
+    function dateKey(date = new Date()) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function displayDate(date = new Date()) { return date.toLocaleDateString(); }
+
+    function allExercises() {
+      return [...new Set(workoutPlan.flatMap(p => p.exercises.map(e => e.name)))];
+    }
+
+    function getNextWorkoutIndex() {
+      const data = getData();
+      if (!data.workouts.length) return 0;
+      const last = data.workouts[0];
+      const lastIndex = typeof last.planIndex === 'number' ? last.planIndex : 0;
+      return (lastIndex + 1) % workoutPlan.length;
+    }
+
+    function nextPlan() { return workoutPlan[getNextWorkoutIndex()]; }
+
+    function showScreen(id, btn) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    }
+
+    function switchToScreen(id) {
+      const buttons = document.querySelectorAll('.nav button');
+      const order = ['today', 'workout', 'weight', 'progress', 'calendar', 'more'];
+      showScreen(id, buttons[order.indexOf(id)]);
+    }
+
+    function goToWorkout() {
+      switchToScreen('workout');
+      document.getElementById('workoutSelect').value = getNextWorkoutIndex();
+      renderExerciseInputs();
+    }
+
+    function parseRepRange(repString) {
+      const nums = String(repString).match(/\d+/g)?.map(Number) || [10, 12];
+      return { min: Math.min(...nums), max: Math.max(...nums) };
+    }
+
+    function latestExerciseLog(name) {
+      const data = getData();
+      for (const workout of data.workouts) {
+        const ex = workout.exercises?.find(e => e.name === name && e.sets && e.sets.length);
+        if (ex) return { workout, ex };
+      }
+      return null;
+    }
+
+    function exerciseSuggestion(exercise) {
+      const latest = latestExerciseLog(exercise.name);
+      const range = parseRepRange(exercise.reps);
+      if (!latest) return 'Start light. Focus on form. Leave 1–2 reps in the tank.';
+      const reps = latest.ex.sets.map(s => Number(s.reps || 0)).filter(Boolean);
+      const weights = latest.ex.sets.map(s => Number(s.weight || 0)).filter(Boolean);
+      if (!reps.length) return 'No reps logged last time. Use a comfortable weight and record all sets today.';
+      const allTop = reps.length >= exercise.sets && reps.every(r => r >= range.max);
+      const belowMin = reps.some(r => r < range.min);
+      const lastWeight = weights.length ? Math.max(...weights) : 0;
+      if (allTop && lastWeight > 0) return `Increase weight slightly next time. Last top weight: ${lastWeight} kg.`;
+      if (allTop) return 'Increase difficulty next time: more time, slower tempo, or harder variation.';
+      if (belowMin) return 'Keep or reduce weight slightly. First priority: clean reps in the target range.';
+      return 'Keep the same weight and try to add 1–2 total reps today.';
+    }
+
+    function renderToday() {
+      const plan = nextPlan();
+      document.getElementById('todayWorkout').innerHTML = `
+        <h3>${plan.day} — ${plan.split}</h3>
+        <span class="pill good">Next in your cycle</span>
+        <span class="pill">${plan.cardio}</span>
+        ${plan.exercises.map(ex => `
+          <div class="exercise">
+            <div class="exercise-head">
+              <div><strong>${ex.name}</strong><div class="small">${ex.sets} sets x ${ex.reps}</div></div>
+              <a href="${ex.video}" target="_blank">Video</a>
+            </div>
+            <p class="small">${exerciseSuggestion(ex)}</p>
+          </div>
+        `).join('')}`;
+    }
+
+    function renderWorkoutForm() {
+      const select = document.getElementById('workoutSelect');
+      select.innerHTML = workoutPlan.map((p, index) => `<option value="${index}">${p.day} — ${p.split}</option>`).join('');
+      select.value = getNextWorkoutIndex();
+      select.onchange = renderExerciseInputs;
+      renderExerciseInputs();
+    }
+
+    function renderExerciseInputs() {
+      const index = Number(document.getElementById('workoutSelect').value || 0);
+      const plan = workoutPlan[index];
+      document.getElementById('exerciseInputs').innerHTML = plan.exercises.map((ex, exIndex) => `
+        <div class="exercise">
+          <div class="exercise-head">
+            <div><strong>${ex.name}</strong><div class="small">Target: ${ex.sets} sets x ${ex.reps}</div></div>
+            <a href="${ex.video}" target="_blank">Video</a>
+          </div>
+          <p class="warning small">${exerciseSuggestion(ex)}</p>
+          ${Array.from({ length: ex.sets }).map((_, setIndex) => `
+            <div class="row">
+              <div><label>Set ${setIndex + 1} Weight</label><input type="number" step="0.5" id="ex${exIndex}set${setIndex}weight" placeholder="kg" /></div>
+              <div><label>Set ${setIndex + 1} Reps / Sec</label><input type="number" id="ex${exIndex}set${setIndex}reps" placeholder="reps/sec" /></div>
+            </div>
+          `).join('')}
+        </div>`).join('');
+    }
+
+    function createWorkoutFromForm(includeSets) {
+      const index = Number(document.getElementById('workoutSelect').value);
+      const plan = workoutPlan[index];
+      const exercises = plan.exercises.map((ex, exIndex) => {
+        const sets = [];
+        if (includeSets) {
+          for (let i = 0; i < ex.sets; i++) {
+            const weight = document.getElementById(`ex${exIndex}set${i}weight`).value;
+            const reps = document.getElementById(`ex${exIndex}set${i}reps`).value;
+            if (weight || reps) sets.push({ set: i + 1, weight: Number(weight || 0), reps: Number(reps || 0) });
+          }
+        }
+        return { name: ex.name, sets };
+      });
+      return {
+        date: dateKey(),
+        displayDate: displayDate(),
+        planIndex: index,
+        day: plan.day,
+        split: plan.split,
+        cardioType: document.getElementById('cardioType').value,
+        cardioMinutes: Number(document.getElementById('cardioMinutes').value || 0),
+        exercises,
+        notes: document.getElementById('workoutNotes').value
+      };
+    }
+
+    function saveWorkout() {
+      const data = getData();
+      data.workouts.unshift(createWorkoutFromForm(true));
+      setData(data);
+      document.getElementById('workoutNotes').value = '';
+      alert('Workout saved locally. Your next workout has moved forward.');
+      renderWorkoutForm();
+      render();
+    }
+
+    function markWorkoutComplete() {
+      if (!confirm('Mark this workout complete without entering sets?')) return;
+      const data = getData();
+      data.workouts.unshift(createWorkoutFromForm(false));
+      setData(data);
+      document.getElementById('workoutNotes').value = '';
+      alert('Workout marked complete. Your next workout has moved forward.');
+      renderWorkoutForm();
+      render();
+    }
+
+    function saveWeight() {
+      const weight = Number(document.getElementById('bodyWeightInput').value);
+      if (!weight) { alert('Please enter your weight.'); return; }
+      const data = getData();
+      data.weights.unshift({ date: dateKey(), displayDate: displayDate(), weight });
+      setData(data);
+      document.getElementById('bodyWeightInput').value = '';
+      alert('Weight saved locally.');
+      render();
+    }
+
+    function latestWeightValue() {
+      const data = getData();
+      return data.weights.length ? data.weights[0].weight : START_WEIGHT;
+    }
+
+    function renderWeightProgress() {
+      const latest = latestWeightValue();
+      const lost = START_WEIGHT - latest;
+      const totalToLose = START_WEIGHT - TARGET_WEIGHT;
+      const progress = Math.max(0, Math.min(100, (lost / totalToLose) * 100));
+      const remaining = Math.max(0, latest - TARGET_WEIGHT).toFixed(1);
+      document.getElementById('currentWeightStat').textContent = `${latest} kg`;
+      document.getElementById('weightProgress').style.width = `${progress}%`;
+      document.getElementById('remainingText').textContent = `${remaining} kg remaining to reach 72 kg.`;
+      document.getElementById('latestWeight').textContent = latest;
+      document.getElementById('remainingWeight').textContent = remaining;
+    }
+
+    function renderWeightHistory() {
+      const data = getData();
+      document.getElementById('weightHistory').innerHTML = data.weights.length
+        ? data.weights.map(w => `<div class="history-item"><strong>${w.weight} kg</strong><span class="small">${w.displayDate || w.date}</span></div>`).join('')
+        : '<p>No weight logs yet.</p>';
+    }
+
+    function uniqueWorkoutDates() {
+      return [...new Set(getData().workouts.map(w => w.date))].sort();
+    }
+
+    function daysBetween(a, b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+
+    function streakStats() {
+      const dates = uniqueWorkoutDates();
+      if (!dates.length) return { current: 0, best: 0 };
+      let best = 1, run = 1;
+      for (let i = 1; i < dates.length; i++) {
+        if (daysBetween(dates[i - 1], dates[i]) <= 3) run += 1;
+        else run = 1;
+        best = Math.max(best, run);
+      }
+      let current = 1;
+      for (let i = dates.length - 1; i > 0; i--) {
+        if (daysBetween(dates[i - 1], dates[i]) <= 3) current += 1;
+        else break;
+      }
+      return { current, best };
+    }
+
+    function renderStreaks() {
+      document.getElementById('currentStreak').textContent = streakStats().current;
+      document.getElementById('bestStreak').textContent = streakStats().best;
+    }
+
+    function renderProgress() {
+      const data = getData();
+      const cardio = data.workouts.reduce((sum, w) => sum + Number(w.cardioMinutes || 0), 0);
+      document.getElementById('workoutsDone').textContent = data.workouts.length;
+      document.getElementById('cardioDone').textContent = cardio;
+      document.getElementById('workoutHistory').innerHTML = data.workouts.length
+        ? data.workouts.map(w => `
+          <div class="history-item">
+            <strong>${w.displayDate || w.date} — ${w.day || 'Day'}: ${w.split}</strong>
+            <div class="small">${w.cardioType}: ${w.cardioMinutes} min</div>
+            <div class="small">${w.exercises.map(e => e.name).join(', ')}</div>
+            ${w.notes ? `<p>${w.notes}</p>` : ''}
+          </div>`).join('')
+        : '<p>No workouts saved yet.</p>';
+      renderWeightChart();
+      renderPersonalRecords();
+      renderExerciseSelect();
+      renderExerciseProgress();
+    }
+
+    function renderWeightChart() {
+      const canvas = document.getElementById('weightChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const data = getData();
+      const weights = [...data.weights].reverse();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#334155'; ctx.lineWidth = 1; ctx.font = '12px Arial'; ctx.fillStyle = '#94a3b8';
+      const padding = 38, width = canvas.width - padding * 2, height = canvas.height - padding * 2;
+      for (let i = 0; i <= 4; i++) {
+        const y = padding + (height / 4) * i;
+        ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(canvas.width - padding, y); ctx.stroke();
+      }
+      ctx.strokeStyle = '#64748b'; ctx.beginPath(); ctx.moveTo(padding, padding); ctx.lineTo(padding, canvas.height - padding); ctx.lineTo(canvas.width - padding, canvas.height - padding); ctx.stroke();
+      if (!weights.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '16px Arial'; ctx.fillText('No weight data yet. Add weight logs to see your graph.', 70, 130); return; }
+      const values = weights.map(w => Number(w.weight));
+      const minWeight = Math.min(TARGET_WEIGHT, ...values) - 1;
+      const maxWeight = Math.max(START_WEIGHT, ...values) + 1;
+      const range = maxWeight - minWeight || 1;
+      for (let i = 0; i <= 4; i++) {
+        const value = maxWeight - (range / 4) * i;
+        const y = padding + (height / 4) * i;
+        ctx.fillStyle = '#94a3b8'; ctx.fillText(value.toFixed(1) + 'kg', 4, y + 4);
+      }
+      function point(index, weight) {
+        const x = weights.length === 1 ? padding + width / 2 : padding + (width / (weights.length - 1)) * index;
+        const y = padding + ((maxWeight - weight) / range) * height;
+        return { x, y };
+      }
+      const targetY = padding + ((maxWeight - TARGET_WEIGHT) / range) * height;
+      ctx.strokeStyle = '#f59e0b'; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(padding, targetY); ctx.lineTo(canvas.width - padding, targetY); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#f59e0b'; ctx.fillText('Target 72kg', canvas.width - 120, targetY - 6);
+      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3; ctx.beginPath();
+      weights.forEach((w, index) => { const p = point(index, Number(w.weight)); if (index === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.stroke();
+      weights.forEach((w, index) => {
+        const p = point(index, Number(w.weight)); ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, Math.PI * 2); ctx.fill();
+        if (index === weights.length - 1 || index === 0) { ctx.fillStyle = '#f8fafc'; ctx.font = '12px Arial'; ctx.fillText(Number(w.weight).toFixed(1), p.x - 12, p.y - 10); }
+      });
+      ctx.fillStyle = '#94a3b8'; ctx.font = '12px Arial';
+      ctx.fillText(weights[0].displayDate || weights[0].date, padding, canvas.height - 10);
+      ctx.fillText(weights[weights.length - 1].displayDate || weights[weights.length - 1].date, canvas.width - padding - 70, canvas.height - 10);
+    }
+
+    function renderPersonalRecords() {
+      const data = getData();
+      const records = {};
+      data.workouts.forEach(w => {
+        (w.exercises || []).forEach(ex => {
+          (ex.sets || []).forEach(s => {
+            const weight = Number(s.weight || 0);
+            const reps = Number(s.reps || 0);
+            if (!records[ex.name]) records[ex.name] = { weight: 0, reps: 0, date: w.displayDate || w.date };
+            const current = records[ex.name];
+            if (weight > current.weight || (weight === current.weight && reps > current.reps)) {
+              records[ex.name] = { weight, reps, date: w.displayDate || w.date };
+            }
+          });
+        });
+      });
+      const entries = Object.entries(records).filter(([, r]) => r.weight || r.reps);
+      document.getElementById('personalRecords').innerHTML = entries.length
+        ? entries.map(([name, r]) => `<div class="history-item"><strong>${name}</strong><div class="small">Best: ${r.weight ? r.weight + ' kg x ' : ''}${r.reps} reps/sec — ${r.date}</div></div>`).join('')
+        : '<p>No personal records yet. Log sets to start tracking PRs.</p>';
+    }
+
+    function renderExerciseSelect() {
+      const select = document.getElementById('exerciseProgressSelect');
+      if (!select) return;
+      const old = select.value;
+      select.innerHTML = allExercises().map(e => `<option value="${e}">${e}</option>`).join('');
+      if (old) select.value = old;
+    }
+
+    function renderExerciseProgress() {
+      const select = document.getElementById('exerciseProgressSelect');
+      const box = document.getElementById('exerciseProgressBox');
+      if (!select || !box) return;
+      const name = select.value || allExercises()[0];
+      const logs = [];
+      getData().workouts.forEach(w => {
+        const ex = (w.exercises || []).find(e => e.name === name && e.sets && e.sets.length);
+        if (ex) logs.push({ date: w.displayDate || w.date, sets: ex.sets });
+      });
+      const planEx = workoutPlan.flatMap(p => p.exercises).find(e => e.name === name) || { name, reps: '10-12', sets: 3 };
+      box.innerHTML = `
+        <div class="history-item"><strong>Suggestion</strong><p>${exerciseSuggestion(planEx)}</p></div>
+        ${logs.length ? logs.slice(0, 8).map(l => `<div class="history-item"><strong>${l.date}</strong><div class="small">${l.sets.map(s => `${s.weight || 0} kg x ${s.reps || 0}`).join(' | ')}</div></div>`).join('') : '<p>No logs for this exercise yet.</p>'}`;
+    }
+
+    function renderCoachTip() {
+      const data = getData();
+      let tip = `Your next workout is ${nextPlan().day}: ${nextPlan().split}. Complete the next workout, not the perfect workout.`;
+      if (data.weights.length >= 2) {
+        const latest = data.weights[0].weight;
+        const oldest = data.weights[data.weights.length - 1].weight;
+        if (latest < oldest) tip = 'Your weight is moving down. Keep protein high, keep lifting, and continue 30-minute cardio.';
+        else tip = 'Weight has not dropped yet. Stay consistent for 2 weeks before changing calories or cardio.';
+      }
+      document.getElementById('coachTip').textContent = tip;
+    }
+
+    function renderPlan() {
+      document.getElementById('planList').innerHTML = workoutPlan.map(p => `
+        <div class="history-item">
+          <strong>${p.day} — ${p.split}</strong>
+          <div class="small">${p.cardio}</div>
+          ${p.exercises.map(e => `
+            <div class="exercise"><div class="exercise-head"><div><strong>${e.name}</strong><div class="small">${e.sets} x ${e.reps}</div></div><a href="${e.video}" target="_blank">Video</a></div></div>
+          `).join('')}
+        </div>`).join('');
+    }
+
+    function renderCalendar() {
+      const data = getData();
+      const year = calendarDate.getFullYear();
+      const month = calendarDate.getMonth();
+      document.getElementById('calendarTitle').textContent = calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const workoutsByDate = {};
+      data.workouts.forEach(w => { if (!workoutsByDate[w.date]) workoutsByDate[w.date] = []; workoutsByDate[w.date].push(w); });
+      const habitDates = new Set(data.habits.map(h => h.date));
+      const heads = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="calendar-head">${d}</div>`).join('');
+      let cells = '';
+      for (let i = 0; i < firstDay; i++) cells += '<div class="calendar-cell"></div>';
+      for (let day = 1; day <= daysInMonth; day++) {
+        const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const items = workoutsByDate[key] || [];
+        cells += `<div class="calendar-cell ${items.length ? 'done' : ''} ${habitDates.has(key) ? 'habit' : ''}"><div class="calendar-day-num">${day}</div>${items.map(w => `<div class="calendar-workout">${w.day || ''} ${w.split}</div>`).join('')}</div>`;
+      }
+      document.getElementById('calendarGrid').innerHTML = heads + cells;
+    }
+
+    function changeMonth(offset) { calendarDate.setMonth(calendarDate.getMonth() + offset); renderCalendar(); }
+
+    function saveMeasurements() {
+      const entry = {
+        date: dateKey(), displayDate: displayDate(),
+        waist: Number(document.getElementById('waistInput').value || 0),
+        chest: Number(document.getElementById('chestInput').value || 0),
+        arm: Number(document.getElementById('armInput').value || 0),
+        thigh: Number(document.getElementById('thighInput').value || 0)
+      };
+      if (!entry.waist && !entry.chest && !entry.arm && !entry.thigh) { alert('Enter at least one measurement.'); return; }
+      const data = getData(); data.measurements.unshift(entry); setData(data);
+      ['waistInput','chestInput','armInput','thighInput'].forEach(id => document.getElementById(id).value = '');
+      alert('Measurements saved locally.'); render();
+    }
+
+    function renderMeasurements() {
+      const data = getData();
+      document.getElementById('measurementHistory').innerHTML = data.measurements.length
+        ? data.measurements.slice(0, 8).map(m => `<div class="history-item"><strong>${m.displayDate || m.date}</strong><div class="small">Waist: ${m.waist || '-'} cm | Chest: ${m.chest || '-'} cm | Arm: ${m.arm || '-'} cm | Thigh: ${m.thigh || '-'} cm</div></div>`).join('')
+        : '<p>No measurements yet.</p>';
+    }
+
+    function saveHabits() {
+      const data = getData();
+      const today = dateKey();
+      const entry = {
+        date: today, displayDate: displayDate(),
+        protein: document.getElementById('proteinHabit').checked,
+        water: document.getElementById('waterHabit').checked,
+        steps: document.getElementById('stepsHabit').checked,
+        junk: document.getElementById('junkHabit').checked
+      };
+      data.habits = data.habits.filter(h => h.date !== today);
+      data.habits.unshift(entry);
+      setData(data);
+      alert('Habits saved for today.'); render();
+    }
+
+    function renderHabits() {
+      const data = getData();
+      const today = data.habits.find(h => h.date === dateKey());
+      document.getElementById('proteinHabit').checked = !!today?.protein;
+      document.getElementById('waterHabit').checked = !!today?.water;
+      document.getElementById('stepsHabit').checked = !!today?.steps;
+      document.getElementById('junkHabit').checked = !!today?.junk;
+      document.getElementById('habitHistory').innerHTML = data.habits.length
+        ? data.habits.slice(0, 7).map(h => {
+          const score = [h.protein, h.water, h.steps, h.junk].filter(Boolean).length;
+          return `<div class="history-item"><strong>${h.displayDate || h.date}</strong><div class="small">Score: ${score}/4 — Protein ${h.protein ? '✓' : '×'}, Water ${h.water ? '✓' : '×'}, Steps ${h.steps ? '✓' : '×'}, Junk-free ${h.junk ? '✓' : '×'}</div></div>`;
+        }).join('')
+        : '<p>No habit logs yet.</p>';
+    }
+
+    function startTimer(seconds) {
+      stopTimer(false);
+      timerRemaining = seconds;
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        timerRemaining -= 1;
+        updateTimerDisplay();
+        if (timerRemaining <= 0) {
+          stopTimer(false);
+          alert('Rest complete. Start your next set.');
+        }
+      }, 1000);
+    }
+
+    function stopTimer(reset = true) {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      if (reset) timerRemaining = 0;
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const min = Math.floor(timerRemaining / 60);
+      const sec = timerRemaining % 60;
+      document.getElementById('timerDisplay').textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    }
+
+    function exportData() {
+      const data = getData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fit72-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData() {
+      const file = document.getElementById('importFile').files[0];
+      if (!file) { alert('Choose a backup JSON file first.'); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const imported = JSON.parse(reader.result);
+          if (!imported || !Array.isArray(imported.weights) || !Array.isArray(imported.workouts)) throw new Error('Invalid backup');
+          imported.measurements = imported.measurements || [];
+          imported.habits = imported.habits || [];
+          setData(imported);
+          alert('Backup imported successfully.');
+          renderWorkoutForm(); render();
+        } catch (e) {
+          alert('Import failed. Please choose a valid Fit72 backup file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetData() {
+      if (confirm('This will delete all local Fit72 data on this browser. Continue?')) {
+        localStorage.removeItem('fit72Data');
+        renderWorkoutForm(); render();
+      }
+    }
+
+    function render() {
+      renderToday();
+      renderWeightProgress();
+      renderWeightHistory();
+      renderStreaks();
+      renderProgress();
+      renderCoachTip();
+      renderPlan();
+      renderCalendar();
+      renderMeasurements();
+      renderHabits();
+    }
+
+    renderWorkoutForm();
+    render();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .catch(() => console.log('Service worker registration failed.'));
+      });
+    }
+  </script>
+</body>
+</html>
